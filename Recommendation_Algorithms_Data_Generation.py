@@ -2,29 +2,30 @@
 # coding: utf-8
 
 
-
+import copy
 import numpy as np
 import json
 import pandas as pd
 import re
 import tensorflow as tf
 
+from numpy.linalg import norm
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras.losses import sparse_categorical_crossentropy
 
-from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score
 from tqdm import tqdm
 
+from GUI_Design import data_to_GUI
 
-
-from gensim.models import LdaModel
-from gensim.parsing.preprocessing import STOPWORDS
-from gensim.corpora import Dictionary
-from gensim.utils import simple_preprocess
-from nltk.stem import WordNetLemmatizer
+# from gensim.models import LdaModel
+# from gensim.parsing.preprocessing import STOPWORDS
+# from gensim.corpora import Dictionary
+# from gensim.utils import simple_preprocess
+# from nltk.stem import WordNetLemmatizer
 
 
 
@@ -109,18 +110,133 @@ def getProbOfQuestions(ability, CandidateMaterialsDifficultyLevel):
 # 获取所有的题目的y=1的概率，然后结合分数（Si）以及题目概率(P(i))，计算期望。
 
 # 题目特征，初步定义为：1. 一个听力材料的试题数量。 2. 听力材料的主题类别。 3.听力试题的难度。
-def Logistic_Regression(xtrain, ytrain, xtest):
-    ytrain_0_1 = []
-    lr = LogisticRegression(multi_class = 'multinomial', solver = 'newton-cg')
-    for y in ytrain:
-        if y > 0.65:
-            ytrain_0_1.append(1)
+
+# Train on the known data, then input all the recommended candidate questions (features) into a logistic regression model, 
+# which will perform binary classification, and ultimately the model will return a probability of y=1/0 for each question.
+# Get the probability of y=1 for all topics, then combine the score (Si) and the topic probability (P(i)) to calculate the expectation.
+
+# The topic characteristics, initially defined as 1. the number of test questions in a piece of listening material. 
+# 2. the topic category of the listening material. 3. the difficulty of the listening test questions.
+class Custom_Logistic_Regression():
+    def __init__(self):
+        self.losses = []
+        self.train_accuracies = []
+
+    def fit(self, x, y, epochs):
+        # x = self._transform_x(x)
+        # y = self._transform_y(y)
+
+        self.weights = np.zeros(x.shape[1])
+        self.bias = 0
+
+        for i in range(epochs):
+            x_dot_weights = np.matmul(self.weights, x.transpose()) + self.bias
+            pred = self._sigmoid(x_dot_weights)
+            loss = self.compute_loss(y, pred)
+            error_w, error_b = self.compute_gradients(x, y, pred)
+            self.update_model_parameters(error_w, error_b)
+
+            pred_to_class = [1 if p > 0.5 else 0 for p in pred]
+            self.train_accuracies.append(accuracy_score(y, pred_to_class))
+            self.losses.append(loss)
+
+    def compute_loss(self, y_true, y_pred):
+        # binary cross entropy
+        y_zero_loss = y_true * np.log(y_pred + 1e-9)
+        y_one_loss = (np.ones(len(y_true))-y_true) * np.log(np.ones(len(y_true)) - y_pred + 1e-9)
+        return -np.mean(y_zero_loss + y_one_loss)
+
+    def compute_gradients(self, x, y_true, y_pred):
+        # derivative of binary cross entropy
+        difference =  y_pred - y_true
+        gradient_b = np.mean(difference)
+        gradients_w = np.matmul(x.transpose(), difference)
+        gradients_w = np.array([np.mean(grad) for grad in gradients_w])
+
+        return gradients_w, gradient_b
+
+    def update_model_parameters(self, error_w, error_b):
+        self.weights = self.weights - 0.1 * error_w
+        self.bias = self.bias - 0.1 * error_b
+
+    def predict(self, x):
+        x_dot_weights = np.matmul(x, self.weights.transpose()) + self.bias
+        probabilities = self._sigmoid(x_dot_weights)
+        return [1 if p > 0.5 else 0 for p in probabilities]
+
+    def predict_probs(self, x):
+        x_dot_weights = np.matmul(x, self.weights.transpose()) + self.bias
+        probabilities = self._sigmoid(x_dot_weights)
+        return probabilities
+    
+    def _sigmoid(self, x):
+        return np.array([self._sigmoid_function(value) for value in x])
+
+    def _sigmoid_function(self, x):
+        if x >= 0:
+            z = np.exp(-x)
+            return 1 / (1 + z)
         else:
-            ytrain_0_1.append(0)
-    lr_model = lr.fit(xtrain, ytrain_0_1)
-    y_predict_prob = lr_model.predict_proba(xtest)
-    y_predict_label = lr_model.predict(xtest)
-    return lr_model, y_predict_prob
+            z = np.exp(x)
+            return z / (1 + z)
+
+    def _transform_x(self, x):
+        x = copy.deepcopy(x)
+        return x.values
+
+    def _transform_y(self, y):
+        y = copy.deepcopy(y)
+        return y.values.reshape(y.shape[0], 1)
+
+
+def Logistic_Regression(xtrain, ytrain, xtest):
+
+    ytrain_0_1 = []
+    xtrain_0_1 = []
+    i_0_1 = []
+    # lr = LogisticRegression(multi_class = 'multinomial', solver = 'newton-cg')
+    lr = Custom_Logistic_Regression()
+    
+    for i,y in enumerate(ytrain):
+        if y < 0.74:
+            ytrain_0_1.append(0)  
+        else:
+            i_0_1.append(i)
+#             ytrain_0_1.append(1)
+    
+    xtrain_0_1 = np.delete(np.array(xtrain), i_0_1, axis=0)
+
+    # lr_model = lr.fit(xtrain, ytrain_0_1)
+    lr.fit(xtrain_0_1, ytrain_0_1, epochs=30)
+
+    y_predict_prob = lr.predict_probs(xtest)
+    y_predict_label = lr.predict(xtest)
+    return list(y_predict_prob)
+
+
+#def Logistic_Regression(xtrain, ytrain, xtest):
+
+#    ytrain_0_1 = []
+#    xtrain_0_1 = []
+#    i_0_1 = []
+#    # lr = LogisticRegression(multi_class = 'multinomial', solver = 'newton-cg')
+#    lr = Custom_Logistic_Regression()
+    
+#    for i,y in enumerate(ytrain):
+#        if y < 0.74:
+#            ytrain_0_1.append(0)  
+#        else:
+#            i_0_1.append(i)
+#        #    ytrain_0_1.append(1)
+    
+#    xtrain_0_1 = np.delete(np.array(xtrain), i_0_1, axis=0)
+
+#    # lr_model = lr.fit(xtrain, ytrain_0_1)
+#    lr_model = lr.fit(xtrain_0_1, ytrain_0_1, epochs=30)
+
+#    y_predict_prob = lr_model.predict_proba(xtest)
+#    y_predict_label = lr_model.predict(xtest)
+#    return lr_model, y_predict_prob
 
 def DecisionTreeRegression(xtrain, ytrain, xtest, depth):
     ytrain_0_1 = []
@@ -172,13 +288,50 @@ def NN(xtrain, ytrain, xtest, lr, decay):
     result_probs = model.predict(xtest)
     return result_probs
 
+def recommendation_by_right_answers(answers, answers_index, ability, material_features_path):
+    answers_1 = []
+    xtrain_data_1 = []
+    i_0 = []
+    i_1 = []
+    recommend_index = []
+    
+    for i,y in enumerate(answers):
+        if y > 0.74:
+            answers_1.append(1)  
+            i_1.append(i)
+        else:
+            i_0.append(i)
+    xtrain_data_1 = np.delete(answers_index, i_0, axis=0)
+    
+    marterials_features = pd.read_csv(material_features_path, index_col=False)
+    correct_items = marterials_features.iloc[i_1]
+    display(correct_items)
+    for one_data in correct_items[["Material Index", "Materials Difficulty", "Questions Numbers", "Topics"]].values:
+        temp_materials = marterials_features.copy()
+        temp_distance = []
+        for ind, row in enumerate(marterials_features[["Material Index", "Materials Difficulty", "Questions Numbers", "Topics"]].values):
+            if (one_data[1] >= row[1]) or (one_data[3] == row[3]) or (row[1] > (ability+0.5)):
+                temp_materials = temp_materials.drop(ind)
+        print(len(temp_materials))
+        for rows in temp_materials[["Materials Difficulty", "Questions Numbers", "Topics"]].values:
+            temp_distance.append(np.dot(one_data[1:], rows)/(norm(one_data[1:])*norm(rows)))
+#         print(len(temp_materials))
+        max_2_index = np.argsort(np.array(temp_distance))[:2]
+        max_2_index_df = temp_materials.iloc[list(max_2_index)]
+        recommend_index.extend(max_2_index_df["Material Index"])
+    return(list(set(recommend_index)))
+
+
 
 def Max_N_Expectation(scores, questions_probs, posterior_probs, n_expectatios):
     expectation_x_z = []
-    if len(posterior_probs[1]) > 1:
-        posterior_y1_probs = posterior_probs[:,1]
+    if len(np.array(posterior_probs).shape) > 1:
+        if np.array(posterior_probs).shape[1] <= 1:
+            posterior_y1_probs = posterior_probs[:,0]
+        else:
+            posterior_y1_probs = posterior_probs[:,1]
     else:
-        posterior_y1_probs = posterior_probs[:,0]
+        posterior_y1_probs = posterior_probs
     for i, _ in enumerate(scores):
         E = scores[i] * questions_probs[i] * posterior_y1_probs[i]
         expectation_x_z.append(E)
@@ -189,3 +342,44 @@ def Max_N_Expectation(scores, questions_probs, posterior_probs, n_expectatios):
     return top_n_ques_index
 
 
+# To get the recommendation questions
+def getRecommendationQuestions(material_feature_path, matDiffPath, dataf, correct_rate, all_selected_items, ability, n_expectations, recom_algo = "Logistic_Regression"):
+
+    matDiff = pd.read_csv(matDiffPath)
+    
+    quesDiff = getQuestionsDifficulty(dataf, list(matDiff['Materials Difficulty']))
+    for i in all_selected_items:
+        quesDiff.pop(i)
+    
+    matDiff = matDiff.drop(index = all_selected_items)
+    print(len(quesDiff))
+    
+    # To get the features of each materials, and split data into train and test data, as input of NN, Logistic or Decision tree.
+    material_features = loadMaterialsFeaturesForML(material_feature_path)
+    Xtrain = material_features.iloc[all_selected_items]
+    Xtrain=Xtrain[["Materials Difficulty", "Questions Numbers", "Topics"]]
+    Xtest = material_features.drop(index = all_selected_items)
+    Xtest=Xtest[["Materials Difficulty", "Questions Numbers", "Topics"]]
+    print(Xtest.shape)
+    question_score, material_score = getQuestionsScore(quesDiff)
+    print(len(material_score))
+    probs_distribution = getProbOfQuestions(ability=ability, CandidateMaterialsDifficultyLevel=list(matDiff['Materials Difficulty']))
+
+    if recom_algo == "Logistic_Regression":
+        predict_probs = Logistic_Regression(xtrain=Xtrain, ytrain=correct_rate, xtest=Xtest)
+    elif recom_algo == "Decision_tree":
+        dt_model, predict_probs = DecisionTreeRegression(xtrain=Xtrain, ytrain=correct_rate, xtest=Xtest, depth=4)
+    elif recom_algo == "NN":
+        predict_probs=NN(xtrain=Xtrain, ytrain=correct_rate, xtest=Xtest, lr=1e-6, decay=1e-2)
+    
+    top_n_questions_by_wrong = Max_N_Expectation(scores=material_score, questions_probs=probs_distribution, 
+                                    posterior_probs=predict_probs, n_expectatios=n_expectations)
+    top_n_questions_by_right = recommendation_by_right_answers(answers=correct_rate, answers_index=all_selected_items, 
+                                                               ability=ability, material_features_path=material_feature_path)
+    top_n_questions = []
+    top_n_questions.extend(top_n_questions_by_wrong)
+    top_n_questions.extend(top_n_questions_by_right)
+    top_n_questions = list(set(top_n_questions))
+    
+    Questions, Choices, TrueAnswers, OutputPath = data_to_GUI(Data = dataf, indices = top_n_questions)
+    return Questions, Choices, TrueAnswers, OutputPath, top_n_questions, top_n_questions_by_right, top_n_questions_by_wrong
