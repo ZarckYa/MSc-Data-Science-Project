@@ -17,6 +17,7 @@ from tensorflow.keras.losses import sparse_categorical_crossentropy
 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 
 from GUI_Design import data_to_GUI
@@ -383,3 +384,36 @@ def getRecommendationQuestions(material_feature_path, matDiffPath, dataf, correc
     
     Questions, Choices, TrueAnswers, OutputPath = data_to_GUI(Data = dataf, indices = top_n_questions)
     return Questions, Choices, TrueAnswers, OutputPath, top_n_questions, top_n_questions_by_right, top_n_questions_by_wrong
+
+
+def getRecommendationByCF(dataf, User_log, new_user):
+    print(type(User_log["Questionnare Choices"].values.tolist()))
+    qc = []
+    Rec = []
+    for a in User_log["Questionnare Choices"].values:
+        oneqc = []
+        for s in a:
+            if s.isdecimal():
+                oneqc.append(int(s))
+        qc.append(oneqc)
+    print(qc)
+    neigh = NearestNeighbors(n_neighbors=1)
+    neigh.fit(qc)
+    nearest = neigh.kneighbors(new_user, return_distance=False)
+    indices_recom_W = User_log.iloc[nearest[0][0]]["Recommendation by Wrong Answer"]
+    indices_recom_R = User_log.iloc[nearest[0][0]]["Recommendation by Correct Answer"]
+    indices_recom = indices_recom_W + indices_recom_R
+    print(len(indices_recom))
+    
+    temp = ''
+    Rec = []
+    for a in indices_recom:
+        if a.isdecimal():
+            temp += a
+        if not a.isdecimal():
+            if temp != '':
+                Rec.append(int(temp))
+            temp = ''
+    print(Rec)
+    Questions, Choices, TrueAnswers, OutputPath = data_to_GUI(Data = dataf, indices = Rec)
+    return Questions, Choices, TrueAnswers, OutputPath, Rec

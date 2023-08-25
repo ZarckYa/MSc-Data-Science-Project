@@ -24,7 +24,7 @@ from scipy.special import roots_legendre
 from readability import Readability
 from sklearn.preprocessing import minmax_scale
 
-from utils import get_respones_vector
+from my_utils import get_respones_vector
 from GUI_Design import ListeningComprehensionApp, data_to_GUI
 
 def getMaterialDifficulty(dataf):
@@ -80,6 +80,7 @@ class Basic_IRT_Adptive_Recommendation():
         self.whole_ability = init_ability
         self.numberOfMaterials = numberOfMaterials
         self.questionsDifficultyLevelNor = questionsDifficultyLevelNor
+        self.materialDifficultyLevelNor = materialDifficultyLevelNor
 
     def normalize_item_parameter(self, one_item_array):
         normalize_item = normalize_item_bank(one_item_array.T)
@@ -251,7 +252,27 @@ class Basic_IRT_Adptive_Recommendation():
             self.selected_all_items.append(new_selected_item)
         return self.selected_items_once
 
-
+    def item_selctor_custmer(self):
+        self.selected_items_once = []
+        matdiff = self.materialDifficultyLevelNor
+        sort_matdiff = sorted(matdiff)
+        argsort_matdiff = np.argsort(matdiff)
+        
+        if self.whole_ability in sort_matdiff:
+            diff_same_indices = sort_matdiff.index(self.whole_ability)
+            choose_range = argsort_matdiff[diff_same_indices:diff_same_indices+10]
+            choose_range = list(choose_range)
+            for _ in range(self.numberOfMaterials):
+                for used in self.administered_items:
+                    if used in choose_range:
+                        choose_range.remove(used)
+                new_selected_item = random.choice(list(choose_range))
+                self.administered_items.append(new_selected_item)
+                self.selected_items_once.append(new_selected_item)
+                self.selected_all_items.append(new_selected_item)
+        else:
+            self.item_selector() 
+        return self.selected_items_once
 
 # This function will be used to get initial theta and bulit the first object of IRT
 def initial_theta(Data, numberOfMaterials, materialDifficultyLevelNor, questionsDifficultyLevelNor):

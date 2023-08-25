@@ -27,6 +27,7 @@ class Quiz:
         
         # Set 2 button states, which can make the button disable
         self.stateNextBack = NORMAL
+        self.stateback = NORMAL
         self.stateAudio = NORMAL
         self.nextOrSubmit = 0
         self.quit = 0
@@ -51,7 +52,7 @@ class Quiz:
     # This function used to dispaly questions one by one.
     def question(self, questionNum):
         # Set a title
-        title = Label(self.quizWindow, text="Quiz in Listening Comprehension", width=50, bg="blue", fg="white", font=("times", 20, "bold"))
+        title = Label(self.quizWindow, text="Quiz in Listening Comprehension", width=50, bg="#66B2FF", fg="white", font=("times", 20, "bold"))
         title.place(x=0, y=2)
        
         # Use the question string variale to store different questions.
@@ -67,7 +68,7 @@ class Quiz:
         
         # Tip for number of questions
         quesNumTips = "In this Audio, will involved " + str(len(self.questions)) + " questions."
-        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='blue', width=60, font=("times", 16, "bold"), anchor="w")
+        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='#66B2FF', width=60, font=("times", 16, "bold"), anchor="w")
         questionNumTips.place(x=70, y=120)
         
         # Tip for audio play times limitation
@@ -135,6 +136,13 @@ class Quiz:
         if len(self.questions) == 1:
             self.nextOrSubmit = 1
             
+        if self.questionNum == 0:
+            self.stateback = DISABLED
+        elif self.stateNextBack == NORMAL:
+            self.stateback = NORMAL
+        else:
+            self.stateback = DISABLED
+
         # A button state controled by the nextOrSubmit variable.
         # When you do the last question, the next botton will become submit.
         if self.nextOrSubmit == 0:
@@ -150,6 +158,7 @@ class Quiz:
         backButton = Button(self.quizWindow, text="Back",command=self.backbtn, width=10,bg="green",fg="white",font=("times",16,"bold"))
         backButton.place(x=20,y=380)
         backButton['state'] = self.stateNextBack
+        backButton['state'] = self.stateback
 
         # Quit button
         quitButton = Button(self.quizWindow, text="Quit Section", command=self.quitTest,width=10,bg="red",fg="white", font=("times",16,"bold"))
@@ -261,6 +270,7 @@ class Recommendation_Questions:
         
         # Set 2 button states, which can make the button disable
         self.stateNextBack = NORMAL
+        self.stateback = NORMAL
         self.stateAudio = NORMAL
         self.nextOrSubmit = 0
         self.quit = 0
@@ -287,7 +297,7 @@ class Recommendation_Questions:
     def question(self, questionNum):
         # Set a title
         title = Label(self.quizWindow, text="Reocmmendation of Listening Comprehension Questions", 
-                      width=50, bg="blue", fg="white", font=("times", 20, "bold"))
+                      width=50, bg="#66B2FF", fg="white", font=("times", 20, "bold"))
         title.place(x=0, y=2)
        
         # Use the question string variale to store different questions.
@@ -303,7 +313,7 @@ class Recommendation_Questions:
         
         # Tip for number of questions
         quesNumTips = "In this Audio, will involved " + str(len(self.questions)) + " questions."
-        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='blue', width=60, font=("times", 16, "bold"), anchor="w")
+        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='#66B2FF', width=60, font=("times", 16, "bold"), anchor="w")
         questionNumTips.place(x=70, y=120)
         
 #         # Tip for audio play times limitation
@@ -380,7 +390,13 @@ class Recommendation_Questions:
         # This is Next button or submit button
         if len(self.questions) == 1:
             self.nextOrSubmit = 1
-            
+
+        if self.questionNum == 0:
+            self.stateback = DISABLED
+        elif self.stateNextBack == NORMAL:
+            self.stateback = NORMAL
+        else:
+            self.stateback = DISABLED           
         # A button state controled by the nextOrSubmit variable.
         # When you do the last question, the next botton will become submit.
         if self.nextOrSubmit == 0:
@@ -396,6 +412,7 @@ class Recommendation_Questions:
         backButton = Button(self.quizWindow, text="Back",command=self.backbtn, width=10,bg="green",fg="white",font=("times",16,"bold"))
         backButton.place(x=20,y=380)
         backButton['state'] = self.stateNextBack
+        backButton['state'] = self.stateback 
 
         # Quit button
         quitButton = Button(self.quizWindow, text="Quit Section", command=self.quitTest,width=10,bg="red",fg="white", font=("times",16,"bold"))
@@ -527,6 +544,7 @@ class Initial_Questionnaire:
         
         # Set 2 button states, which can make the button disable
         self.stateNextBack = NORMAL
+        self.stateback = NORMAL
         self.nextOrSubmit = 0
         self.quit = 0
         
@@ -550,7 +568,7 @@ class Initial_Questionnaire:
     def question(self, questionNum):
         # Set a title
         title = Label(self.quizWindow, text="Initial Ability Estimation Questionnaire", 
-                      width=50, bg="blue", fg="white", font=("times", 20, "bold"))
+                      width=50, bg="#66B2FF", fg="white", font=("times", 20, "bold"))
         title.place(x=0, y=2)
        
         # Use the question string variale to store different questions.
@@ -566,7 +584,7 @@ class Initial_Questionnaire:
         
         # Tip for number of questions
         quesNumTips = "In this questionnaire, will involved " + str(len(self.questions)) + " questions."
-        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='blue', width=60, font=("times", 15, "bold"), anchor="w")
+        questionNumTips = Label(self.quizWindow, text = quesNumTips, fg='#66B2FF', width=60, font=("times", 15, "bold"), anchor="w")
         questionNumTips.place(x=70, y=120)
 
         # Tip for functions
@@ -631,7 +649,14 @@ class Initial_Questionnaire:
         # This is Next button or submit button
         if len(self.questions) == 1:
             self.nextOrSubmit = 1
-            
+
+        if self.questionNum == 0:
+            self.stateback = DISABLED
+        elif self.stateNextBack == NORMAL:
+            self.stateback = NORMAL
+        else:
+            self.stateback = DISABLED    
+
         # A button state controled by the nextOrSubmit variable.
         # When you do the last question, the next botton will become submit.
         if self.nextOrSubmit == 0:
@@ -642,11 +667,12 @@ class Initial_Questionnaire:
             nextButton = Button(self.quizWindow, text="Submit Section",command=self.nextbtn, width=12,bg="green",fg="white",font=("times",16,"bold"))
             nextButton.place(x=200,y=380)
             nextButton['state'] = self.stateNextBack           
-        
+            
         # Back button
         backButton = Button(self.quizWindow, text="Back",command=self.backbtn, width=10,bg="green",fg="white",font=("times",16,"bold"))
         backButton.place(x=20,y=380)
         backButton['state'] = self.stateNextBack
+        backButton['state'] = self.stateback 
 
         # Quit button
         quitButton = Button(self.quizWindow, text="Quit Section", command=self.quitTest,width=10,bg="red",fg="white", font=("times",16,"bold"))
@@ -846,7 +872,7 @@ class Materials(Frame):
         # Show some Tips
         textTips1 = "In this Quiz, you will finish " + str(controller.materialLen) + " listening materials, \n" + "you have total " + str(controller.totalQuesNum) + " questions"
         
-        text1 = Label(self, text = textTips1, width=40, fg='blue', font=("times", 16, "bold"), anchor="w")
+        text1 = Label(self, text = textTips1, width=40, fg='#66B2FF', font=("times", 16, "bold"), anchor="w")
         text1.place(x=70, y=50)
         
         textTips2 = "A." + str(controller.frameIndex) + ":"
@@ -964,7 +990,7 @@ class RecommendationMaterials(Frame):
 
         textTips1 = "In this recommendation phase, you can go through \n" + str(controller.materialLen) + " listening materials, " + "you have total " + str(controller.totalQuesNum) + " questions"
         
-        text1 = Label(self, text = textTips1, width=40, fg='blue', font=("times", 16, "bold"), anchor="w")
+        text1 = Label(self, text = textTips1, width=40, fg='#66B2FF', font=("times", 16, "bold"), anchor="w")
         text1.place(x=70, y=50)
 
         textTips2 = "A." + str(controller.frameIndex) + ":"
